@@ -1,0 +1,959 @@
+groups:
+- name: prometheus
+  rules:
+  - alert: 指标维度过高
+    expr: count by (__name__,instance)({__name__=~".+" ,__name__!="apiserver_request_duration_seconds_bucket"}) > 10000
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Prometheus指标维度过高，当前值：{{ $value }}({{ $labels.instance }})
+      description: "指标维度过高严重影响prometheus性能"
+
+  - alert: PrometheusConfigurationReloadFailure
+    expr: prometheus_config_last_reload_successful != 1
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Prometheus configuration reload failure value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus configuration reload error"
+
+  - alert: PrometheusTooManyRestarts
+    expr: changes(process_start_time_seconds{job=~"prometheus|pushgateway|alertmanager"}[15m]) > 2
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Prometheus too many restarts value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus has restarted more than twice in the last 15 minutes. It might be crashlooping."
+
+  - alert: PrometheusAlertmanagerConfigurationReloadFailure
+    expr: alertmanager_config_last_reload_successful != 1
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Prometheus AlertManager configuration reload failure value：{{ $value }}({{ $labels.instance }})
+      description: "AlertManager configuration reload error"
+
+  - alert: PrometheusAlertmanagerConfigNotSynced
+    expr: count(count_values("config_hash", alertmanager_config_hash)) > 1
+    for: 1m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Prometheus AlertManager config not synced value：{{ $value }}({{ $labels.instance }})
+      description: "Configurations of AlertManager cluster instances are out of sync"
+
+  - alert: PrometheusNotConnectedToAlertmanager
+    expr: prometheus_notifications_alertmanagers_discovered < 1
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Prometheus not connected to alertmanager value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus cannot connect the alertmanager"
+
+  - alert: PrometheusRuleEvaluationFailures
+    expr: increase(prometheus_rule_evaluation_failures_total[3m]) > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Prometheus rule evaluation failures value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus encountered {{ $value }} rule evaluation failures, leading to potentially ignored alerts."
+
+  - alert: PrometheusTemplateTextExpansionFailures
+    expr: increase(prometheus_template_text_expansion_failures_total[3m]) > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Prometheus template text expansion failures value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus encountered {{ $value }} template text expansion failures"
+
+  - alert: PrometheusRuleEvaluationSlow
+    expr: prometheus_rule_group_last_duration_seconds > prometheus_rule_group_interval_seconds
+    for: 5m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Prometheus rule evaluation slow value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus rule evaluation took more time than the scheduled interval. It indicates a slower storage backend access or too complex query."
+
+  - alert: PrometheusNotificationsBacklog
+    expr: min_over_time(prometheus_notifications_queue_length[10m]) > 0
+    for: 1m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Prometheus notifications backlog value：{{ $value }}({{ $labels.instance }})
+      description: "The Prometheus notification queue has not been empty for 10 minutes"
+
+  - alert: PrometheusAlertmanagerNotificationFailing
+    expr: rate(alertmanager_notifications_failed_total[1m]) > 0
+    for: 1m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Prometheus AlertManager notification failing value：{{ $value }}({{ $labels.instance }})
+      description: "Alertmanager is failing sending notifications"
+
+  - alert: PrometheusTargetEmpty
+    expr: prometheus_sd_discovered_targets == 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Prometheus target empty value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus has no target in service discovery"
+
+  - alert: PrometheusTargetScrapingSlow
+    expr: prometheus_target_interval_length_seconds{quantile="0.9"} > 120
+    for: 5m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Prometheus target scraping slow value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus is scraping exporters slowly"
+
+  - alert: PrometheusLargeScrape
+    expr: increase(prometheus_target_scrapes_exceeded_sample_limit_total[10m]) > 10
+    for: 5m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Prometheus large scrape value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus has many scrapes that exceed the sample limit"
+
+  - alert: PrometheusTargetScrapeDuplicate
+    expr: increase(prometheus_target_scrapes_sample_duplicate_timestamp_total[5m]) > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Prometheus target scrape duplicate value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus has many samples rejected due to duplicate timestamps but different values"
+
+  - alert: PrometheusTsdbCheckpointCreationFailures
+    expr: increase(prometheus_tsdb_checkpoint_creations_failed_total[1m]) > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Prometheus TSDB checkpoint creation failures value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus encountered {{ $value }} checkpoint creation failures"
+
+  - alert: PrometheusTsdbCheckpointDeletionFailures
+    expr: increase(prometheus_tsdb_checkpoint_deletions_failed_total[1m]) > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Prometheus TSDB checkpoint deletion failures value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus encountered {{ $value }} checkpoint deletion failures"
+
+  - alert: PrometheusTsdbCompactionsFailed
+    expr: increase(prometheus_tsdb_compactions_failed_total[1m]) > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Prometheus TSDB compactions failed value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus encountered {{ $value }} TSDB compactions failures"
+
+  - alert: PrometheusTsdbHeadTruncationsFailed
+    expr: increase(prometheus_tsdb_head_truncations_failed_total[1m]) > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Prometheus TSDB head truncations failed value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus encountered {{ $value }} TSDB head truncation failures"
+
+  - alert: PrometheusTsdbReloadFailures
+    expr: increase(prometheus_tsdb_reloads_failures_total[1m]) > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Prometheus TSDB reload failures value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus encountered {{ $value }} TSDB reload failures"
+
+  - alert: PrometheusTsdbWalCorruptions
+    expr: increase(prometheus_tsdb_wal_corruptions_total[1m]) > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Prometheus TSDB WAL corruptions value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus encountered {{ $value }} TSDB WAL corruptions"
+
+  - alert: PrometheusTsdbWalTruncationsFailed
+    expr: increase(prometheus_tsdb_wal_truncations_failed_total[1m]) > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Prometheus TSDB WAL truncations failed value：{{ $value }}({{ $labels.instance }})
+      description: "Prometheus encountered {{ $value }} TSDB WAL truncation failures"
+
+- name: node
+  rules:
+  - alert: HostOutOfMemory
+    expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 10
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host out of memory value：{{ $value }}({{ $labels.instance }})
+      description: "Node memory is filling up (< 10% left)"
+
+  - alert: HostMemoryUnderMemoryPressure
+    expr: rate(node_vmstat_pgmajfault[1m]) > 1000
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host memory under memory pressure value：{{ $value }}({{ $labels.instance }})
+      description: "The node is under heavy memory pressure. High rate of major page faults"
+
+  - alert: HostUnusualNetworkThroughputIn
+    expr: sum by (instance) (rate(node_network_receive_bytes_total[2m])) / 1024 / 1024 > 100
+    for: 5m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host unusual network throughput in value：{{ $value }}({{ $labels.instance }})
+      description: "Host network interfaces are probably receiving too much data (> 100 MB/s)"
+
+  - alert: HostUnusualNetworkThroughputOut
+    expr: sum by (instance) (rate(node_network_transmit_bytes_total[2m])) / 1024 / 1024 > 100
+    for: 5m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host unusual network throughput out value：{{ $value }}({{ $labels.instance }})
+      description: "Host network interfaces are probably sending too much data (> 100 MB/s)"
+
+  - alert: HostUnusualDiskReadRate
+    expr: sum by (instance) (rate(node_disk_read_bytes_total[2m])) / 1024 / 1024 > 50
+    for: 5m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host unusual disk read rate value：{{ $value }}({{ $labels.instance }})
+      description: "Disk is probably reading too much data (> 50 MB/s)"
+
+  - alert: HostUnusualDiskWriteRate
+    expr: sum by (instance) (rate(node_disk_written_bytes_total[2m])) / 1024 / 1024 > 50
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host unusual disk write rate value：{{ $value }}({{ $labels.instance }})
+      description: "Disk is probably writing too much data (> 50 MB/s)"
+
+  # Please add ignored mountpoints in node_exporter parameters like
+  # "--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|run)($|/)".
+  # Same rule using "node_filesystem_free_bytes" will fire when disk fills for non-root users.
+  - alert: HostOutOfDiskSpace
+    expr: (node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes < 10 and ON (instance, device, mountpoint) node_filesystem_readonly == 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: 文件系统可用空间低于10% value：{{ $value }}({{ $labels.instance }})
+      description: "文件系统空间使用率高 (< 10% left)"
+
+  # Please add ignored mountpoints in node_exporter parameters like
+  # "--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|run)($|/)".
+  # Same rule using "node_filesystem_free_bytes" will fire when disk fills for non-root users.
+  - alert: HostDiskWillFillIn24Hours
+    expr: (node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes < 10 and ON (instance, device, mountpoint) predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs"}[1h], 24 * 3600) < 0 and ON (instance, device, mountpoint) node_filesystem_readonly == 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: 文件系统空间预计在24小时后使用完 value：{{ $value }}({{ $labels.instance }})
+      description: "文件系统空间快耗尽"
+
+  - alert: HostOutOfInodes
+    expr: node_filesystem_files_free{mountpoint ="/rootfs"} / node_filesystem_files{mountpoint="/rootfs"} * 100 < 10 and ON (instance, device, mountpoint) node_filesystem_readonly{mountpoint="/rootfs"} == 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: 文件系统可用 inode 低于10% value：{{ $value }}({{ $labels.instance }})
+      description: "文件系统inode使用率高 (< 10% left)"
+
+  - alert: HostInodesWillFillIn24Hours
+    expr: node_filesystem_files_free{mountpoint ="/rootfs"} / node_filesystem_files{mountpoint="/rootfs"} * 100 < 10 and predict_linear(node_filesystem_files_free{mountpoint="/rootfs"}[1h], 24 * 3600) < 0 and ON (instance, device, mountpoint) node_filesystem_readonly{mountpoint="/rootfs"} == 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: 文件系统inode快耗尽 value：{{ $value }}({{ $labels.instance }})
+      description: "文件系统 inode 预计在24小时后使用完"
+
+  - alert: HostUnusualDiskReadLatency
+    expr: rate(node_disk_read_time_seconds_total[1m]) / rate(node_disk_reads_completed_total[1m]) > 0.1 and rate(node_disk_reads_completed_total[1m]) > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host unusual disk read latency value：{{ $value }}({{ $labels.instance }})
+      description: "Disk latency is growing (read operations > 100ms)"
+
+  - alert: HostUnusualDiskWriteLatency
+    expr: rate(node_disk_write_time_seconds_total[1m]) / rate(node_disk_writes_completed_total[1m]) > 0.9 and rate(node_disk_writes_completed_total[1m]) > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host unusual disk write latency value：{{ $value }}({{ $labels.instance }})
+      description: "Disk latency is growing (write operations > 900ms)"
+
+  - alert: HostHighCpuLoad
+    expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 80
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host high CPU load value：{{ $value }}({{ $labels.instance }})
+      description: "CPU load is > 80%"
+
+  - alert: 5分钟平均负载过高
+    expr: floor(max(node_load5)by(clusterName,project,instance,kubernetes_node)*100/count(node_cpu_seconds_total{mode="system"}) by(clusterName,project,instance,kubernetes_node))>100
+    for: 5m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: 5分钟平均负载过高：{{ $value }}%({{ $labels.instance }})
+      description: "5分钟平均负载过高(负载/核数) > 100%"
+
+  - alert: HostCpuStealNoisyNeighbor
+    expr: avg by(instance) (rate(node_cpu_seconds_total{mode="steal"}[5m])) * 100 > 10
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host CPU steal noisy neighbor value：{{ $value }}({{ $labels.instance }})
+      description: "CPU steal is > 10%. A noisy neighbor is killing VM performances or a spot instance may be out of credit."
+
+  - alert: HostSwapIsFillingUp
+    expr: (1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) * 100 > 80
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host swap is filling up value：{{ $value }}({{ $labels.instance }})
+      description: "Swap is filling up (>80%)"
+
+  - alert: HostSystemdServiceCrashed
+    expr: node_systemd_unit_state{state="failed"} == 1
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host systemd service crashed value：{{ $value }}({{ $labels.instance }})
+      description: "systemd service crashed"
+
+  - alert: HostPhysicalComponentTooHot
+    expr: node_hwmon_temp_celsius > 75
+    for: 5m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host physical component too hot value：{{ $value }}({{ $labels.instance }})
+      description: "Physical hardware component too hot"
+
+  - alert: HostNodeOvertemperatureAlarm
+    expr: node_hwmon_temp_crit_alarm_celsius == 1
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Host node overtemperature alarm value：{{ $value }}({{ $labels.instance }})
+      description: "Physical node temperature alarm triggered"
+
+  - alert: HostRaidArrayGotInactive
+    expr: node_md_state{state="inactive"} > 0
+    for: 1m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Host RAID array got inactive value：{{ $value }}({{ $labels.instance }})
+      description: "RAID array {{ $labels.device }} is in degraded state due to one or more disks failures. Number of spare drives is insufficient to fix issue automatically."
+
+  - alert: HostRaidDiskFailure
+    expr: node_md_disks{state="failed"} > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host RAID disk failure value：{{ $value }}({{ $labels.instance }})
+      description: "At least one device in RAID array on {{ $labels.instance }} failed. Array {{ $labels.md_device }} needs attention and possibly a disk swap"
+
+  - alert: HostKernelVersionDeviations
+    expr: count(sum(label_replace(node_uname_info, "kernel", "$1", "release", "([0-9]+.[0-9]+.[0-9]+).*")) by (kernel)) > 1
+    for: 6h
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host kernel version deviations value：{{ $value }}({{ $labels.instance }})
+      description: "Different kernel versions are running"
+
+  - alert: HostOomKillDetected
+    expr: increase(node_vmstat_oom_kill[1m]) > 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host OOM kill detected value：{{ $value }}({{ $labels.instance }})
+      description: "OOM kill detected"
+
+  - alert: HostEdacCorrectableErrorsDetected
+    expr: increase(node_edac_correctable_errors_total[1m]) > 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: info
+    annotations:
+      summary: Host EDAC Correctable Errors detected value：{{ $value }}({{ $labels.instance }})
+      description: "Host {{ $labels.instance }} has had {{ printf \"%.0f\" $value }} correctable memory errors reported by EDAC in the last 5 minutes."
+
+  - alert: HostEdacUncorrectableErrorsDetected
+    expr: node_edac_uncorrectable_errors_total > 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host EDAC Uncorrectable Errors detected value：{{ $value }}({{ $labels.instance }})
+      description: "Host {{ $labels.instance }} has had {{ printf \"%.0f\" $value }} uncorrectable memory errors reported by EDAC in the last 5 minutes."
+
+  - alert: HostNetworkReceiveErrors
+    expr: rate(node_network_receive_errs_total[2m]) / rate(node_network_receive_packets_total[2m]) > 0.01
+    for: 10m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: 网卡接收数据出错 value：{{ $value }}({{ $labels.instance }})
+      description: "Host {{ $labels.instance }} interface {{ $labels.device }} has encountered {{ printf \"%.0f\" $value }} receive errors in the last five minutes."
+
+  - alert: HostNetworkTransmitErrors
+    expr: rate(node_network_transmit_errs_total[2m]) / rate(node_network_transmit_packets_total[2m]) > 0.01
+    for: 10m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: 网卡发送数据出错 value：{{ $value }}({{ $labels.instance }})
+      description: "Host {{ $labels.instance }} interface {{ $labels.device }} has encountered {{ printf \"%.0f\" $value }} transmit errors in the last five minutes."
+
+  - alert: HostNetworkInterfaceSaturated
+    expr: (rate(node_network_receive_bytes_total{device!~"^tap.*"}[1m]) + rate(node_network_transmit_bytes_total{device!~"^tap.*"}[1m])) / node_network_speed_bytes{device!~"^tap.*"} > 0.8
+    for: 1m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host Network Interface Saturated value：{{ $value }}({{ $labels.instance }})
+      description: "The network interface \"{{ $labels.interface }}\" on \"{{ $labels.instance }}\" is getting overloaded."
+
+  - alert: HostConntrackLimit
+    expr: node_nf_conntrack_entries / node_nf_conntrack_entries_limit > 0.8
+    for: 5m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Host conntrack limit value：{{ $value }}({{ $labels.instance }})
+      description: "The number of conntrack is approching limit"
+
+  - alert: HostClockSkew
+    expr: (node_timex_offset_seconds > 0.05 and deriv(node_timex_offset_seconds[5m]) >= 0) or (node_timex_offset_seconds < -0.05 and deriv(node_timex_offset_seconds[5m]) <= 0)
+    for: 10m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: 机器时钟漂移 value：{{ $value }}({{ $labels.instance }})
+      description: "Clock skew detected. Clock is out of sync."
+
+  - alert: HostClockNotSynchronising
+    expr: min_over_time(node_timex_sync_status[1m]) == 0 and node_timex_maxerror_seconds >= 16
+    for: 10m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: 机器时钟未同步 value：{{ $value }}({{ $labels.instance }})
+      description: "Clock not synchronising."
+
+- name: etcd
+  rules:
+  - alert: EtcdInsufficientMembers
+    expr: count(etcd_server_id) % 2 == 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Etcd insufficient Members value：{{ $value }}({{ $labels.instance }})
+      description: "Etcd cluster should have an odd number of members"
+
+  - alert: EtcdNoLeader
+    expr: etcd_server_has_leader == 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Etcd no Leader value：{{ $value }}({{ $labels.instance }})
+      description: "Etcd cluster have no leader"
+
+  - alert: EtcdHighNumberOfLeaderChanges
+    expr: increase(etcd_server_leader_changes_seen_total[10m]) > 2
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Etcd high number of leader changes value：{{ $value }}({{ $labels.instance }})
+      description: "Etcd leader changed more than 2 times during 10 minutes"
+
+  - alert: EtcdHighNumberOfFailedGrpcRequests
+    expr: sum(rate(grpc_server_handled_total{grpc_code!="OK"}[1m])) BY (grpc_service, grpc_method) / sum(rate(grpc_server_handled_total[1m])) BY (grpc_service, grpc_method) > 0.01
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Etcd high number of failed GRPC requests value：{{ $value }}({{ $labels.instance }})
+      description: "More than 1% GRPC request failure detected in Etcd"
+
+  - alert: EtcdHighNumberOfFailedGrpcRequests
+    expr: sum(rate(grpc_server_handled_total{grpc_code!="OK"}[1m])) BY (grpc_service, grpc_method) / sum(rate(grpc_server_handled_total[1m])) BY (grpc_service, grpc_method) > 0.05
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Etcd high number of failed GRPC requests value：{{ $value }}({{ $labels.instance }})
+      description: "More than 5% GRPC request failure detected in Etcd"
+
+  - alert: EtcdGrpcRequestsSlow
+    expr: histogram_quantile(0.99, sum(rate(grpc_server_handling_seconds_bucket{grpc_type="unary"}[1m])) by (grpc_service, grpc_method, le)) > 0.15
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Etcd GRPC requests slow value：{{ $value }}({{ $labels.instance }})
+      description: "GRPC requests slowing down, 99th percentil is over 0.15s"
+
+  - alert: EtcdHighNumberOfFailedHttpRequests
+    expr: sum(rate(etcd_http_failed_total[1m])) BY (method) / sum(rate(etcd_http_received_total[1m])) BY (method) > 0.01
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Etcd high number of failed HTTP requests value：{{ $value }}({{ $labels.instance }})
+      description: "More than 1% HTTP failure detected in Etcd"
+
+  - alert: EtcdHighNumberOfFailedHttpRequests
+    expr: sum(rate(etcd_http_failed_total[1m])) BY (method) / sum(rate(etcd_http_received_total[1m])) BY (method) > 0.05
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Etcd high number of failed HTTP requests value：{{ $value }}({{ $labels.instance }})
+      description: "More than 5% HTTP failure detected in Etcd"
+
+  - alert: EtcdHttpRequestsSlow
+    expr: histogram_quantile(0.99, rate(etcd_http_successful_duration_seconds_bucket[1m])) > 0.15
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Etcd HTTP requests slow value：{{ $value }}({{ $labels.instance }})
+      description: "HTTP requests slowing down, 99th percentil is over 0.15s"
+
+  - alert: EtcdMemberCommunicationSlow
+    expr: histogram_quantile(0.99, rate(etcd_network_peer_round_trip_time_seconds_bucket[1m])) > 0.15
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Etcd member communication slow value：{{ $value }}({{ $labels.instance }})
+      description: "Etcd member communication slowing down, 99th percentil is over 0.15s"
+
+  - alert: EtcdHighNumberOfFailedProposals
+    expr: increase(etcd_server_proposals_failed_total[1h]) > 5
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Etcd high number of failed proposals value：{{ $value }}({{ $labels.instance }})
+      description: "Etcd server got more than 5 failed proposals past hour"
+
+  - alert: EtcdHighFsyncDurations
+    expr: histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[1m])) > 0.5
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Etcd high fsync durations value：{{ $value }}({{ $labels.instance }})
+      description: "Etcd WAL fsync duration increasing, 99th percentil is over 0.5s"
+
+  - alert: EtcdHighCommitDurations
+    expr: histogram_quantile(0.99, rate(etcd_disk_backend_commit_duration_seconds_bucket[1m])) > 0.25
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Etcd high commit durations value：{{ $value }}({{ $labels.instance }})
+      description: "Etcd commit duration increasing, 99th percentil is over 0.25s"
+
+- name: redis
+  rules:
+  - alert: RedisDown
+    expr: redis_up == 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Redis down value：{{ $value }}({{ $labels.instance }})
+      description: "Redis instance is down"
+
+  - alert: RedisMissingMaster
+    expr: (count(redis_instance_info{role="master"}) or vector(0)) < 1
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Redis missing master value：{{ $value }}({{ $labels.instance }})
+      description: "Redis cluster has no node marked as master."
+
+  - alert: RedisTooManyMasters
+    expr: count(redis_instance_info{role="master"}) > 1
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Redis too many masters value：{{ $value }}({{ $labels.instance }})
+      description: "Redis cluster has too many nodes marked as master."
+
+  - alert: RedisDisconnectedSlaves
+    expr: count without (instance, job) (redis_connected_slaves) - sum without (instance, job) (redis_connected_slaves) - 1 > 1
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Redis disconnected slaves value：{{ $value }}({{ $labels.instance }})
+      description: "Redis not replicating for all slaves. Consider reviewing the redis replication status."
+
+  - alert: RedisReplicationBroken
+    expr: delta(redis_connected_slaves[1m]) < 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Redis replication broken value：{{ $value }}({{ $labels.instance }})
+      description: "Redis instance lost a slave"
+
+  - alert: RedisClusterFlapping
+    expr: changes(redis_connected_slaves[1m]) > 1
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Redis cluster flapping value：{{ $value }}({{ $labels.instance }})
+      description: "Changes have been detected in Redis replica connection. This can occur when replica nodes lose connection to the master and reconnect (a.k.a flapping)."
+
+  - alert: RedisMissingBackup
+    expr: time() - redis_rdb_last_save_timestamp_seconds > 60 * 60 * 24
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Redis missing backup value：{{ $value }}({{ $labels.instance }})
+      description: "Redis has not been backuped for 24 hours"
+
+  # The exporter must be started with --include-system-metrics flag or REDIS_EXPORTER_INCL_SYSTEM_METRICS=true environment variable.
+  - alert: RedisOutOfSystemMemory
+    expr: redis_memory_used_bytes / redis_total_system_memory_bytes * 100 > 90
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Redis out of system memory value：{{ $value }}({{ $labels.instance }})
+      description: "Redis is running out of system memory (> 90%)"
+
+  - alert: RedisOutOfConfiguredMaxmemory
+    expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 90
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Redis out of configured maxmemory value：{{ $value }}({{ $labels.instance }})
+      description: "Redis is running out of configured maxmemory (> 90%)"
+
+  - alert: RedisTooManyConnections
+    expr: redis_connected_clients > 100
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Redis too many connections value：{{ $value }}({{ $labels.instance }})
+      description: "Redis instance has too many connections"
+
+  - alert: RedisNotEnoughConnections
+    expr: redis_connected_clients < 5
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: Redis not enough connections value：{{ $value }}({{ $labels.instance }})
+      description: "Redis instance should have more connections (> 5)"
+
+  - alert: RedisRejectedConnections
+    expr: increase(redis_rejected_connections_total[1m]) > 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: Redis rejected connections value：{{ $value }}({{ $labels.instance }})
+      description: "Some connections to Redis has been rejected"
+
+- name: mysql
+  rules:
+  - alert: MysqlDown
+    expr: mysql_up == 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: MySQL down value：{{ $value }}({{ $labels.instance }})
+      description: "MySQL instance is down on {{ $labels.instance }}"
+
+  - alert: MysqlTooManyConnections(>80%)
+    expr: avg by (instance) (rate(mysql_global_status_threads_connected[1m])) / avg by (instance) (mysql_global_variables_max_connections) * 100 > 80
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: MySQL too many connections (> 80%) value：{{ $value }}({{ $labels.instance }})
+      description: "More than 80% of MySQL connections are in use on {{ $labels.instance }}"
+
+  - alert: MysqlHighThreadsRunning
+    expr: avg by (instance) (rate(mysql_global_status_threads_running[1m])) / avg by (instance) (mysql_global_variables_max_connections) * 100 > 60
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: MySQL high threads running value：{{ $value }}({{ $labels.instance }})
+      description: "More than 60% of MySQL connections are in running state on {{ $labels.instance }}"
+
+  - alert: MysqlSlaveIoThreadNotRunning
+    expr: mysql_slave_status_master_server_id > 0 and ON (instance) mysql_slave_status_slave_io_running == 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: MySQL Slave IO thread not running value：{{ $value }}({{ $labels.instance }})
+      description: "MySQL Slave IO thread not running on {{ $labels.instance }}"
+
+  - alert: MysqlSlaveSqlThreadNotRunning
+    expr: mysql_slave_status_master_server_id > 0 and ON (instance) mysql_slave_status_slave_sql_running == 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: MySQL Slave SQL thread not running value：{{ $value }}({{ $labels.instance }})
+      description: "MySQL Slave SQL thread not running on {{ $labels.instance }}"
+
+  - alert: MysqlSlaveReplicationLag
+    expr: mysql_slave_status_master_server_id > 0 and ON (instance) (mysql_slave_status_seconds_behind_master - mysql_slave_status_sql_delay) > 30
+    for: 1m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: MySQL Slave replication lag value：{{ $value }}({{ $labels.instance }})
+      description: "MySQL replication lag on {{ $labels.instance }}"
+
+  - alert: MysqlSlowQueries
+    expr: increase(mysql_global_status_slow_queries[1m]) > 0
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: MySQL slow queries value：{{ $value }}({{ $labels.instance }})
+      description: "MySQL server mysql has some new slow query."
+
+  - alert: MysqlInnodbLogWaits
+    expr: rate(mysql_global_status_innodb_log_waits[15m]) > 10
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: MySQL InnoDB log waits value：{{ $value }}({{ $labels.instance }})
+      description: "MySQL innodb log writes stalling"
+
+  - alert: MysqlRestarted
+    expr: mysql_global_status_uptime < 60
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: info
+    annotations:
+      summary: MySQL restarted value：{{ $value }}({{ $labels.instance }})
+      description: "MySQL has just been restarted, less than one minute ago on {{ $labels.instance }}."
+
+- name: mongo
+  rules:
+  - alert: MongodbDown
+    expr: mongodb_up == 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: MongoDB Down value：{{ $value }}({{ $labels.instance }})
+      description: "MongoDB instance is down"
+
+  - alert: MongodbReplicationLag
+    expr: mongodb_mongod_replset_member_optime_date{state="PRIMARY"} - ON (set) mongodb_mongod_replset_member_optime_date{state="SECONDARY"} > 10
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: MongoDB replication lag value：{{ $value }}({{ $labels.instance }})
+      description: "Mongodb replication lag is more than 10s"
+
+  - alert: MongodbReplicationHeadroom
+    expr: (avg(mongodb_mongod_replset_oplog_tail_timestamp - mongodb_mongod_replset_oplog_head_timestamp) - (avg(mongodb_mongod_replset_member_optime_date{state="PRIMARY"}) - avg(mongodb_mongod_replset_member_optime_date{state="SECONDARY"}))) <= 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: MongoDB replication headroom value：{{ $value }}({{ $labels.instance }})
+      description: "MongoDB replication headroom is <= 0"
+
+  - alert: MongodbNumberCursorsOpen
+    expr: mongodb_mongod_metrics_cursor_open{state="total"} > 10 * 1000
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: MongoDB number cursors open value：{{ $value }}({{ $labels.instance }})
+      description: "Too many cursors opened by MongoDB for clients (> 10k)"
+
+  - alert: MongodbCursorsTimeouts
+    expr: increase(mongodb_mongod_metrics_cursor_timed_out_total[1m]) > 100
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: MongoDB cursors timeouts value：{{ $value }}({{ $labels.instance }})
+      description: "Too many cursors are timing out"
+
+  - alert: MongodbTooManyConnections
+    expr: avg by(instance) (rate(mongodb_connections{state="current"}[1m])) / avg by(instance) (sum (mongodb_connections) by (instance)) * 100 > 80
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: MongoDB too many connections value：{{ $value }}({{ $labels.instance }})
+      description: "Too many connections (> 80%)"
+
+  - alert: MongodbVirtualMemoryUsage
+    expr: (sum(mongodb_memory{type="virtual"}) BY (instance) / sum(mongodb_memory{type="mapped"}) BY (instance)) > 3
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: MongoDB virtual memory usage value：{{ $value }}({{ $labels.instance }})
+      description: "High memory usage"
