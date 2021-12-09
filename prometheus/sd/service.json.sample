@@ -1,0 +1,14 @@
+[
+    {
+        "labels": {
+            "project": "zhongtai",
+            "env_name": "demo",
+            "kubernetes_pod_name": "hostname1",
+            "service": "dataserver",
+            "stage": "online"
+        },
+        "targets": [
+            "172.16.0.55:9158"
+        ]
+    }
+]
