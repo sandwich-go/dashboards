@@ -16,7 +16,7 @@
     "gnetId": null,
     "graphTooltip": 0,
     "id": null,
-    "iteration": 1646884133846,
+    "iteration": 1646912855515,
     "links": [],
     "panels": [
       {
@@ -69,7 +69,7 @@
         "pluginVersion": "7.3.7",
         "targets": [
           {
-            "expr": "count (dataserver_connections_max_open{job=\"$job\", project=\"$project\",env_name=\"$env\",server_id=\"0\"})",
+            "expr": "count (myproxy_connections_max_open{job=\"$job\", project=\"$project\",env_name=\"$env\",server_id=\"0\"})",
             "interval": "",
             "legendFormat": "",
             "refId": "A"
@@ -130,7 +130,7 @@
         "pluginVersion": "7.3.7",
         "targets": [
           {
-            "expr": "count(count by(server_id) (dataserver_connections_max_open{job=\"$job\", project=\"$project\",env_name=\"$env\",server_id!=\"0\"}))",
+            "expr": "count(count by(server_id) (myproxy_connections_max_open{job=\"$job\", project=\"$project\",env_name=\"$env\",server_id!=\"0\"}))",
             "interval": "",
             "legendFormat": "",
             "refId": "A"
@@ -146,6 +146,7 @@
         "fieldConfig": {
           "defaults": {
             "custom": {},
+            "decimals": 0,
             "mappings": [],
             "thresholds": {
               "mode": "absolute",
@@ -159,7 +160,8 @@
                   "value": 80
                 }
               ]
-            }
+            },
+            "unit": "short"
           },
           "overrides": []
         },
@@ -177,7 +179,7 @@
           "orientation": "auto",
           "reduceOptions": {
             "calcs": [
-              "mean"
+              "lastNotNull"
             ],
             "fields": "",
             "values": false
@@ -187,9 +189,9 @@
         "pluginVersion": "7.3.7",
         "targets": [
           {
-            "expr": "count by (domain)(siid_next{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\"})",
+            "expr": "count (siid_next{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\"})",
             "interval": "",
-            "legendFormat": "Domain",
+            "legendFormat": "",
             "refId": "A"
           }
         ],
@@ -244,7 +246,7 @@
         "pluginVersion": "7.3.7",
         "targets": [
           {
-            "expr": "sum(rate(dataserver_option_access_count{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\"}[5m]))",
+            "expr": "sum(rate(myproxy_option_access_count{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\"}[5m]))",
             "interval": "",
             "legendFormat": "API QPS",
             "refId": "A"
@@ -303,7 +305,7 @@
         "pluginVersion": "7.3.7",
         "targets": [
           {
-            "expr": "max(dataserver_option_access{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\"})",
+            "expr": "max(myproxy_option_access{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\"})",
             "interval": "",
             "legendFormat": "",
             "refId": "A"
@@ -508,7 +510,7 @@
         "dashLength": 10,
         "dashes": false,
         "datasource": "$datasource",
-        "description": "**Api Cost Time**\n\nAPI访问操作消耗时间",
+        "description": "**Api Cost Time **\n\nAPI访问操作消耗时间",
         "fieldConfig": {
           "defaults": {
             "custom": {}
@@ -553,7 +555,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "dataserver_option_access{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
+            "expr": "myproxy_option_access{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
             "interval": "",
             "legendFormat": "{{kubernetes_pod_name}}_{{option}}_{{quantile}}",
             "refId": "A"
@@ -563,7 +565,7 @@
         "timeFrom": null,
         "timeRegions": [],
         "timeShift": null,
-        "title": "Cost Time of Api",
+        "title": "API Latency",
         "tooltip": {
           "shared": true,
           "sort": 2,
@@ -606,7 +608,7 @@
         "dashLength": 10,
         "dashes": false,
         "datasource": "$datasource",
-        "description": "**Cost Time of Service**\n\n服务逻辑消耗时间",
+        "description": "**Api Cost Time**\n\nAPI访问操作消耗时间",
         "fieldConfig": {
           "defaults": {
             "custom": {}
@@ -622,7 +624,7 @@
           "y": 7
         },
         "hiddenSeries": false,
-        "id": 40,
+        "id": 431,
         "legend": {
           "alignAsTable": true,
           "avg": true,
@@ -651,9 +653,9 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "dataserver_option_service{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
+            "expr": "sum by (option)(rate(myproxy_option_access_count{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\"}[2m]))",
             "interval": "",
-            "legendFormat": "{{kubernetes_pod_name}}_{{option}}_{{quantile}}",
+            "legendFormat": "{{option}}",
             "refId": "A"
           }
         ],
@@ -661,7 +663,7 @@
         "timeFrom": null,
         "timeRegions": [],
         "timeShift": null,
-        "title": "Cost Time of Service",
+        "title": "API QPS",
         "tooltip": {
           "shared": true,
           "sort": 2,
@@ -749,7 +751,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "dataserver_option_store{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
+            "expr": "myproxy_option_store{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
             "interval": "",
             "legendFormat": "{{kubernetes_pod_name}}_{{option}}_{{quantile}}",
             "refId": "A"
@@ -759,7 +761,7 @@
         "timeFrom": null,
         "timeRegions": [],
         "timeShift": null,
-        "title": "Cost Time of Store",
+        "title": "Store Latency",
         "tooltip": {
           "shared": true,
           "sort": 2,
@@ -802,7 +804,7 @@
         "dashLength": 10,
         "dashes": false,
         "datasource": "$datasource",
-        "description": "**Cost Time of Cache**\n\n缓存消耗时间",
+        "description": "**Cost Time of Database**\n\n数据库访问消耗时间",
         "fieldConfig": {
           "defaults": {
             "custom": {}
@@ -818,7 +820,7 @@
           "y": 15
         },
         "hiddenSeries": false,
-        "id": 44,
+        "id": 432,
         "legend": {
           "alignAsTable": true,
           "avg": true,
@@ -847,9 +849,9 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "dataserver_option_cache{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
+            "expr": "sum (rate(myproxy_option_store_count{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\"}[2m])) by (option)",
             "interval": "",
-            "legendFormat": "{{kubernetes_pod_name}}_{{option}}_{{quantile}}",
+            "legendFormat": "{{option}}",
             "refId": "A"
           }
         ],
@@ -857,7 +859,7 @@
         "timeFrom": null,
         "timeRegions": [],
         "timeShift": null,
-        "title": "Cost Time of Cache",
+        "title": "Store QPS",
         "tooltip": {
           "shared": true,
           "sort": 2,
@@ -945,7 +947,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "slow_dataserver_option_access{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
+            "expr": "slow_myproxy_option_access{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
             "interval": "",
             "legendFormat": "{{kubernetes_pod_name}}_{{option}}_{{quantile}}",
             "refId": "A"
@@ -955,105 +957,7 @@
         "timeFrom": null,
         "timeRegions": [],
         "timeShift": null,
-        "title": "Slow Option of Api",
-        "tooltip": {
-          "shared": true,
-          "sort": 2,
-          "value_type": "individual"
-        },
-        "type": "graph",
-        "xaxis": {
-          "buckets": null,
-          "mode": "time",
-          "name": null,
-          "show": true,
-          "values": []
-        },
-        "yaxes": [
-          {
-            "format": "s",
-            "label": null,
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true
-          },
-          {
-            "format": "short",
-            "label": null,
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true
-          }
-        ],
-        "yaxis": {
-          "align": false,
-          "alignLevel": null
-        }
-      },
-      {
-        "aliasColors": {},
-        "bars": false,
-        "dashLength": 10,
-        "dashes": false,
-        "datasource": "$datasource",
-        "description": "**Slow Option of Service**\n\n服务慢操作",
-        "fieldConfig": {
-          "defaults": {
-            "custom": {}
-          },
-          "overrides": []
-        },
-        "fill": 1,
-        "fillGradient": 0,
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 23
-        },
-        "hiddenSeries": false,
-        "id": 48,
-        "legend": {
-          "alignAsTable": true,
-          "avg": true,
-          "current": true,
-          "max": true,
-          "min": true,
-          "show": true,
-          "total": false,
-          "values": true
-        },
-        "lines": true,
-        "linewidth": 1,
-        "nullPointMode": "null",
-        "options": {
-          "alertThreshold": true
-        },
-        "percentage": false,
-        "pluginVersion": "7.3.7",
-        "pointradius": 2,
-        "points": false,
-        "renderer": "flot",
-        "seriesOverrides": [],
-        "spaceLength": 10,
-        "stack": false,
-        "steppedLine": false,
-        "targets": [
-          {
-            "exemplar": true,
-            "expr": "slow_dataserver_option_service{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
-            "interval": "",
-            "legendFormat": "{{kubernetes_pod_name}}_{{option}}_{{quantile}}",
-            "refId": "A"
-          }
-        ],
-        "thresholds": [],
-        "timeFrom": null,
-        "timeRegions": [],
-        "timeShift": null,
-        "title": "Slow Option of Service",
+        "title": "Slow of Api",
         "tooltip": {
           "shared": true,
           "sort": 2,
@@ -1108,8 +1012,8 @@
         "gridPos": {
           "h": 8,
           "w": 12,
-          "x": 0,
-          "y": 31
+          "x": 12,
+          "y": 23
         },
         "hiddenSeries": false,
         "id": 50,
@@ -1141,7 +1045,7 @@
         "targets": [
           {
             "exemplar": true,
-            "expr": "slow_dataserver_option_store{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
+            "expr": "slow_myproxy_option_store{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
             "interval": "",
             "legendFormat": "{{kubernetes_pod_name}}_{{option}}_{{quantile}}",
             "refId": "A"
@@ -1151,105 +1055,7 @@
         "timeFrom": null,
         "timeRegions": [],
         "timeShift": null,
-        "title": "Slow Option of Store",
-        "tooltip": {
-          "shared": true,
-          "sort": 2,
-          "value_type": "individual"
-        },
-        "type": "graph",
-        "xaxis": {
-          "buckets": null,
-          "mode": "time",
-          "name": null,
-          "show": true,
-          "values": []
-        },
-        "yaxes": [
-          {
-            "format": "s",
-            "label": null,
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true
-          },
-          {
-            "format": "short",
-            "label": null,
-            "logBase": 1,
-            "max": null,
-            "min": null,
-            "show": true
-          }
-        ],
-        "yaxis": {
-          "align": false,
-          "alignLevel": null
-        }
-      },
-      {
-        "aliasColors": {},
-        "bars": false,
-        "dashLength": 10,
-        "dashes": false,
-        "datasource": "$datasource",
-        "description": "**Slow Option of Cache**\n\n缓存慢操作",
-        "fieldConfig": {
-          "defaults": {
-            "custom": {}
-          },
-          "overrides": []
-        },
-        "fill": 1,
-        "fillGradient": 0,
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 31
-        },
-        "hiddenSeries": false,
-        "id": 52,
-        "legend": {
-          "alignAsTable": true,
-          "avg": true,
-          "current": true,
-          "max": true,
-          "min": true,
-          "show": true,
-          "total": false,
-          "values": true
-        },
-        "lines": true,
-        "linewidth": 1,
-        "nullPointMode": "null",
-        "options": {
-          "alertThreshold": true
-        },
-        "percentage": false,
-        "pluginVersion": "7.3.7",
-        "pointradius": 2,
-        "points": false,
-        "renderer": "flot",
-        "seriesOverrides": [],
-        "spaceLength": 10,
-        "stack": false,
-        "steppedLine": false,
-        "targets": [
-          {
-            "exemplar": true,
-            "expr": "slow_dataserver_option_cache{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
-            "interval": "",
-            "legendFormat": "{{kubernetes_pod_name}}_{{option}}_{{quantile}}",
-            "refId": "A"
-          }
-        ],
-        "thresholds": [],
-        "timeFrom": null,
-        "timeRegions": [],
-        "timeShift": null,
-        "title": "Slow Option of Cache",
+        "title": "Slow of Store",
         "tooltip": {
           "shared": true,
           "sort": 2,
@@ -1305,7 +1111,7 @@
           "h": 8,
           "w": 12,
           "x": 0,
-          "y": 39
+          "y": 31
         },
         "hiddenSeries": false,
         "id": 416,
@@ -1401,7 +1207,7 @@
           "h": 8,
           "w": 12,
           "x": 12,
-          "y": 39
+          "y": 31
         },
         "hiddenSeries": false,
         "id": 417,
@@ -1497,7 +1303,7 @@
           "h": 8,
           "w": 12,
           "x": 0,
-          "y": 47
+          "y": 39
         },
         "hiddenSeries": false,
         "id": 418,
@@ -1593,7 +1399,7 @@
           "h": 8,
           "w": 12,
           "x": 12,
-          "y": 47
+          "y": 39
         },
         "hiddenSeries": false,
         "id": 419,
@@ -1677,7 +1483,7 @@
           "h": 1,
           "w": 24,
           "x": 0,
-          "y": 55
+          "y": 47
         },
         "id": 393,
         "panels": [
@@ -1700,7 +1506,7 @@
               "h": 8,
               "w": 12,
               "x": 0,
-              "y": 8
+              "y": 48
             },
             "hiddenSeries": false,
             "id": 382,
@@ -1730,7 +1536,7 @@
             "steppedLine": false,
             "targets": [
               {
-                "expr": "dataserver_connections_max_open{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
+                "expr": "myproxy_connections_max_open{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
                 "interval": "",
                 "legendFormat": "{{kubernetes_pod_name}}: db{{server_id}}: Max Open",
                 "refId": "A"
@@ -1796,7 +1602,7 @@
               "h": 8,
               "w": 12,
               "x": 12,
-              "y": 8
+              "y": 48
             },
             "hiddenSeries": false,
             "id": 383,
@@ -1826,7 +1632,7 @@
             "steppedLine": false,
             "targets": [
               {
-                "expr": "dataserver_connections_open{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
+                "expr": "myproxy_connections_open{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
                 "interval": "",
                 "legendFormat": "{{kubernetes_pod_name}}: db{{server_id}}: Open",
                 "refId": "A"
@@ -1893,7 +1699,7 @@
               "h": 8,
               "w": 12,
               "x": 0,
-              "y": 16
+              "y": 56
             },
             "hiddenSeries": false,
             "id": 386,
@@ -1923,19 +1729,19 @@
             "steppedLine": false,
             "targets": [
               {
-                "expr": "increase(dataserver_connections_closed_max_idle{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}[5m])",
+                "expr": "increase(myproxy_connections_closed_max_idle{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}[5m])",
                 "interval": "5m",
                 "legendFormat": "{{kubernetes_pod_name}}: db{{server_id}}: max idle",
                 "refId": "A"
               },
               {
-                "expr": "increase(dataserver_connections_closed_max_lifetime{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}[5m])",
+                "expr": "increase(myproxy_connections_closed_max_lifetime{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}[5m])",
                 "interval": "5m",
                 "legendFormat": "{{kubernetes_pod_name}}: db{{server_id}}: max life time",
                 "refId": "B"
               },
               {
-                "expr": "increase(dataserver_connections_closed_max_idle_time{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}[5m])",
+                "expr": "increase(myproxy_connections_closed_max_idle_time{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}[5m])",
                 "interval": "5m",
                 "legendFormat": "{{kubernetes_pod_name}}: db{{server_id}}: max idle time",
                 "refId": "C"
@@ -2003,7 +1809,7 @@
               "h": 8,
               "w": 12,
               "x": 12,
-              "y": 16
+              "y": 56
             },
             "hiddenSeries": false,
             "id": 391,
@@ -2033,13 +1839,13 @@
             "steppedLine": false,
             "targets": [
               {
-                "expr": "dataserver_connections_in_use{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
+                "expr": "myproxy_connections_in_use{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
                 "interval": "",
                 "legendFormat": "{{kubernetes_pod_name}}: db{{server_id}}: in use",
                 "refId": "A"
               },
               {
-                "expr": "dataserver_connections_idle{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
+                "expr": "myproxy_connections_idle{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}",
                 "interval": "",
                 "legendFormat": "{{kubernetes_pod_name}}: db{{server_id}}:  idle",
                 "refId": "B"
@@ -2107,7 +1913,7 @@
               "h": 8,
               "w": 12,
               "x": 0,
-              "y": 24
+              "y": 64
             },
             "hiddenSeries": false,
             "id": 389,
@@ -2137,7 +1943,7 @@
             "steppedLine": false,
             "targets": [
               {
-                "expr": "increase(dataserver_connections_waited_for{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}[5m])",
+                "expr": "increase(myproxy_connections_waited_for{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}[5m])",
                 "interval": "5m",
                 "legendFormat": "{{kubernetes_pod_name}}: db{{server_id}} waited for",
                 "refId": "A"
@@ -2204,7 +2010,7 @@
               "h": 8,
               "w": 12,
               "x": 12,
-              "y": 24
+              "y": 64
             },
             "hiddenSeries": false,
             "id": 388,
@@ -2234,7 +2040,7 @@
             "steppedLine": false,
             "targets": [
               {
-                "expr": "rate(dataserver_connections_blocked_seconds{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}[2m])",
+                "expr": "rate(myproxy_connections_blocked_seconds{job=\"$job\", project=\"$project\", env_name=\"$env\", stage=\"$stage\",kubernetes_pod_name=~\"$pod\"}[2m])",
                 "interval": "",
                 "legendFormat": "{{kubernetes_pod_name}}: db{{server_id}}",
                 "refId": "A"
@@ -2300,7 +2106,7 @@
               "h": 8,
               "w": 12,
               "x": 0,
-              "y": 32
+              "y": 72
             },
             "hiddenSeries": false,
             "id": 409,
@@ -2397,7 +2203,7 @@
               "h": 8,
               "w": 12,
               "x": 12,
-              "y": 32
+              "y": 72
             },
             "hiddenSeries": false,
             "id": 411,
@@ -2493,7 +2299,7 @@
               "h": 8,
               "w": 12,
               "x": 0,
-              "y": 40
+              "y": 80
             },
             "hiddenSeries": false,
             "id": 399,
@@ -2589,7 +2395,7 @@
               "h": 8,
               "w": 12,
               "x": 12,
-              "y": 40
+              "y": 80
             },
             "hiddenSeries": false,
             "id": 410,
@@ -2685,7 +2491,7 @@
               "h": 8,
               "w": 12,
               "x": 0,
-              "y": 48
+              "y": 88
             },
             "hiddenSeries": false,
             "id": 400,
@@ -2773,7 +2579,7 @@
           "h": 1,
           "w": 24,
           "x": 0,
-          "y": 56
+          "y": 48
         },
         "id": 2,
         "panels": [
@@ -2796,7 +2602,7 @@
               "h": 8,
               "w": 12,
               "x": 0,
-              "y": 9
+              "y": 49
             },
             "hiddenSeries": false,
             "id": 4,
@@ -2948,7 +2754,7 @@
               "h": 8,
               "w": 12,
               "x": 12,
-              "y": 9
+              "y": 49
             },
             "hiddenSeries": false,
             "id": 6,
@@ -3084,7 +2890,7 @@
               "h": 8,
               "w": 12,
               "x": 0,
-              "y": 17
+              "y": 57
             },
             "hiddenSeries": false,
             "id": 8,
@@ -3196,7 +3002,7 @@
               "h": 8,
               "w": 12,
               "x": 12,
-              "y": 17
+              "y": 57
             },
             "hiddenSeries": false,
             "id": 10,
@@ -3300,7 +3106,7 @@
               "h": 8,
               "w": 12,
               "x": 0,
-              "y": 25
+              "y": 65
             },
             "hiddenSeries": false,
             "id": 12,
@@ -3403,7 +3209,7 @@
               "h": 8,
               "w": 12,
               "x": 12,
-              "y": 25
+              "y": 65
             },
             "hiddenSeries": false,
             "id": 14,
@@ -3507,7 +3313,7 @@
               "h": 8,
               "w": 12,
               "x": 0,
-              "y": 33
+              "y": 73
             },
             "hiddenSeries": false,
             "id": 20,
@@ -3611,7 +3417,7 @@
               "h": 8,
               "w": 12,
               "x": 12,
-              "y": 33
+              "y": 73
             },
             "hiddenSeries": false,
             "id": 16,
@@ -3715,7 +3521,7 @@
               "h": 8,
               "w": 12,
               "x": 0,
-              "y": 41
+              "y": 81
             },
             "hiddenSeries": false,
             "id": 18,
@@ -3819,7 +3625,7 @@
               "h": 8,
               "w": 12,
               "x": 12,
-              "y": 41
+              "y": 81
             },
             "hiddenSeries": false,
             "id": 22,
@@ -3960,10 +3766,12 @@
         {
           "allValue": null,
           "current": {
-            "selected": false
+            "selected": false,
+            "text": "dragonmutation",
+            "value": "dragonmutation"
           },
           "datasource": "$datasource",
-          "definition": "label_values(dataserver_connections_max_open,project)",
+          "definition": "label_values(myproxy_connections_max_open,project)",
           "error": null,
           "hide": 2,
           "includeAll": false,
@@ -3971,9 +3779,9 @@
           "multi": false,
           "name": "project",
           "options": [],
-          "query": "label_values(dataserver_connections_max_open,project)",
+          "query": "label_values(myproxy_connections_max_open,project)",
           "refresh": 2,
-          "regex": "",
+          "regex": "dragonmutation",
           "skipUrlSync": false,
           "sort": 0,
           "tagValuesQuery": "",
@@ -3990,7 +3798,7 @@
             "value": "development"
           },
           "datasource": "$datasource",
-          "definition": "label_values(dataserver_connections_max_open{job=\"$job\", project=\"$project\"}, env_name)",
+          "definition": "label_values(myproxy_connections_max_open{job=\"$job\", project=\"$project\"}, env_name)",
           "error": null,
           "hide": 0,
           "includeAll": false,
@@ -3998,7 +3806,7 @@
           "multi": false,
           "name": "env",
           "options": [],
-          "query": "label_values(dataserver_connections_max_open{job=\"$job\", project=\"$project\"}, env_name)",
+          "query": "label_values(myproxy_connections_max_open{job=\"$job\", project=\"$project\"}, env_name)",
           "refresh": 2,
           "regex": "",
           "skipUrlSync": false,
@@ -4017,7 +3825,7 @@
             "value": "online"
           },
           "datasource": "$datasource",
-          "definition": "label_values(dataserver_connections_max_open{job=\"$job\", project=\"$project\",env_name=\"$env\"},stage)",
+          "definition": "label_values(myproxy_connections_max_open{job=\"$job\", project=\"$project\",env_name=\"$env\"},stage)",
           "error": null,
           "hide": 0,
           "includeAll": false,
@@ -4025,7 +3833,7 @@
           "multi": false,
           "name": "stage",
           "options": [],
-          "query": "label_values(dataserver_connections_max_open{job=\"$job\", project=\"$project\",env_name=\"$env\"},stage)",
+          "query": "label_values(myproxy_connections_max_open{job=\"$job\", project=\"$project\",env_name=\"$env\"},stage)",
           "refresh": 2,
           "regex": "",
           "skipUrlSync": false,
@@ -4040,6 +3848,7 @@
           "allValue": null,
           "current": {
             "selected": true,
+            "tags": [],
             "text": [
               "All"
             ],
@@ -4048,7 +3857,7 @@
             ]
           },
           "datasource": "$datasource",
-          "definition": "label_values(dataserver_connections_max_open{job=\"$job\", project=\"$project\",env_name=\"$env\"},kubernetes_pod_name)",
+          "definition": "label_values(myproxy_connections_max_open{job=\"$job\", project=\"$project\",env_name=\"$env\"},kubernetes_pod_name)",
           "error": null,
           "hide": 0,
           "includeAll": true,
@@ -4056,7 +3865,7 @@
           "multi": true,
           "name": "pod",
           "options": [],
-          "query": "label_values(dataserver_connections_max_open{job=\"$job\", project=\"$project\",env_name=\"$env\"},kubernetes_pod_name)",
+          "query": "label_values(myproxy_connections_max_open{job=\"$job\", project=\"$project\",env_name=\"$env\"},kubernetes_pod_name)",
           "refresh": 2,
           "regex": "",
           "skipUrlSync": false,
@@ -4147,12 +3956,12 @@
       ]
     },
     "time": {
-      "from": "now-30m",
+      "from": "now-15m",
       "to": "now"
     },
     "timepicker": {},
     "timezone": "",
     "title": "MyProxy 1.5",
-    "uid": "null",
-    "version": 19
+    "uid": null,
+    "version": 25
   }
