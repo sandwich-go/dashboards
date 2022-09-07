@@ -3,7 +3,7 @@
         "labels": {
             "project": "zhongtai",
             "env_name": "demo",
-            "kubernetes_pod_name": "hostname1",
+            "pod": "hostname1",
             "service": "dataserver",
             "stage": "online"
         },
@@ -15,7 +15,7 @@
         "labels": {
             "project": "zhongtai",
             "env_name": "demo",
-            "kubernetes_pod_name": "hostname2",
+            "pod": "hostname2",
             "service": "dataserver",
             "stage": "online"
         },

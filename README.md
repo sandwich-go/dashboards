@@ -1,11 +1,11 @@
 # 大辉哥天下第一！！！
 
-- pb2db:  
-  antia_db_process_his_bucket antia_db_process_time_summary_sum antia_db_process_time_summary_count  
-- go-metrics:  
-  展示promethues golang client自带metrics [grafana](https://grafana.com/grafana/dashboards/13722)  
-- sandwich-monitor:  
-  展示使用sandwich框架的服务的api调用信息 [grafana](https://grafana.com/grafana/dashboards/13458)  
-- siid:  
-  展示siid服务的状态指标 [grafana](https://grafana.com/grafana/dashboards/13505)  
+- grafana-dashboard
+  包含sandwich dataserver 等 看板信息
   
+- docker
+  * 包含grafana和prometheus的docker-compose，可以通过docker-compose up -d 直接拉起，然后访问`http://127.0.0.1:3000`访问grafana，初始使用admin/admin 登陆，然后会要求重置管理员密码。
+  * 第一次需要在grafana中添加datasource，选择prometheus，地址输入`http://prometheus:9090`保存即可
+
+- v1
+  老版本看板
