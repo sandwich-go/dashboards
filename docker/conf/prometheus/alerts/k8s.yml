@@ -1,0 +1,608 @@
+groups:
+- name: CAdvisor
+  rules:
+  - alert: K8S-Pod 占用CPU过高
+    expr: floor(sum (rate (container_cpu_usage_seconds_total{container!="POD",container!="",namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging",instance!~"local-dev.*"}[2m])) by (namespace,pod) / sum (kube_pod_container_resource_limits{container!="POD",container!="",resource="cpu"}) by (namespace,pod) * 100) > 85
+    for: 2m
+    labels:
+      severity: Critical
+    annotations:
+      summary: "{{ $labels.pod }}占用CPU过高,达到Limits的{{ $value }}%"
+      description: "占用CPU过高,高于Limits的85%"
+
+  # See https://medium.com/faun/how-much-is-too-much-the-linux-oomkiller-and-used-memory-d32186f29c9d
+  - alert: K8S-Pod 占用内存过高
+    expr: floor(sum(container_memory_working_set_bytes{container!="POD", container!="",namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging",instance!~"local-dev.*"}) BY (namespace, container, pod) / sum(kube_pod_container_resource_limits{container!="POD", container!="",resource="memory"} > 0) BY (namespace, container, pod) * 100) > 85
+    for: 2m
+    labels:
+      severity: Critical
+    annotations:
+      summary: "{{ $labels.pod }}占用内存过高,达到Limits的{{ $value }}%"
+      description: "占用内存过高,高于Limits的85%"
+
+  - alert: ContainerVolumeIoUsage
+    expr: floor(sum(container_fs_io_current{container!="POD", container!="",namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging",instance!~"local-dev.*"}) BY (namespace, container, pod) * 100) > 80
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: "Container Volume IO usage ({{ $labels.pod }}： {{ $value }}%)"
+      description: "Container Volume IO usage is above 80%"
+
+  - alert: K8S-Pod CPU过热
+    expr: sum(increase(container_cpu_cfs_throttled_periods_total{container!="POD", container!="",namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging",instance!~"local-dev.*"}[5m])) by (container, pod, namespace) / sum(increase(container_cpu_cfs_periods_total{}[5m])) by (container, pod, namespace) > ( 25 / 100 )
+    for: 10m
+    labels:
+      severity: Info
+    annotations:
+      summary: "CPU过热({{ $labels.pod }})"
+      description: "CPU过热，请提高Limit，[参考](https://zhuanlan.zhihu.com/p/433065108)"
+
+  - alert: K8S-Pod 占用磁盘空间过高
+    expr: floor(sum(container_fs_usage_bytes{container!="POD",container!="",namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"}) by (namespace, pod) /1000/1000) > 1200
+    for: 10m
+    labels:
+      severity: Warning
+    annotations:
+      summary: "占用磁盘空间过高({{ $labels.pod }})达到{{ $value }}M"
+      description: "占用磁盘空间过高，有把宿主机写满的风险"
+
+- name: KubernetesAlert
+  rules:
+  - alert: KubernetesNodeReady
+    expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+    for: 10m
+    labels:
+      severity: Critical
+    annotations:
+      summary: Kubernetes Node ready (instance {{ $labels.instance }})
+      description: "Node {{ $labels.node }} has been unready for a long time"
+
+  - alert: KubernetesMemoryPressure
+    expr: kube_node_status_condition{condition="MemoryPressure",status="true"} == 1
+    for: 2m
+    labels:
+      severity: Critical
+    annotations:
+      summary: Kubernetes memory pressure (instance {{ $labels.instance }})
+      description: "{{ $labels.node }} has MemoryPressure condition, VALUE = {{ $value }}"
+
+  - alert: KubernetesDiskPressure
+    expr: kube_node_status_condition{condition="DiskPressure",status="true"} == 1
+    for: 2m
+    labels:
+      severity: Critical
+    annotations:
+      summary: Kubernetes disk pressure (instance {{ $labels.instance }})
+      description: "{{ $labels.node }} has DiskPressure condition, VALUE = {{ $value }}"
+
+  - alert: KubernetesOutOfDisk
+    expr: kube_node_status_condition{condition="OutOfDisk",status="true"} == 1
+    for: 2m
+    labels:
+      severity: Critical
+    annotations:
+      summary: Kubernetes out of disk (instance {{ $labels.instance }})
+      description: "{{ $labels.node }} has OutOfDisk condition, VALUE = {{ $value }}"
+
+  - alert: KubernetesOutOfCapacity
+    expr: sum by (node) ((kube_pod_status_phase{phase="Running"} == 1) + on(uid) group_left(node) (0 * kube_pod_info{pod_template_hash=""})) / sum by (node) (kube_node_status_allocatable{resource="pods"}) * 100 > 90
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Kubernetes out of capacity (instance {{ $labels.instance }})
+      description: "{{ $labels.node }} is out of capacity, VALUE = {{ $value }}"
+
+  - alert: 服务OOMKilled
+    expr: (kube_pod_container_status_restarts_total{namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"} - kube_pod_container_status_restarts_total offset 10m >= 1) and ignoring (reason) min_over_time(kube_pod_container_status_last_terminated_reason{reason="OOMKilled"}[10m]) == 1
+    for: 0m
+    labels:
+      severity: Critical
+    annotations:
+      summary: 服务OOMKilled({{ $labels.pod }})
+      description: "Container {{ $labels.container }} in pod {{ $labels.namespace }}/{{ $labels.pod }} has been OOMKilled {{ $value }} times in the last 10 minutes."
+
+  - alert: KubernetesPersistentvolumeclaimPending
+    expr: kube_persistentvolumeclaim_status_phase{phase="Pending"} == 1
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Kubernetes PersistentVolumeClaim pending (instance {{ $labels.instance }})
+      description: "PersistentVolumeClaim {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} is pending, VALUE = {{ $value }}"
+
+  - alert: KubernetesVolumeOutOfDiskSpace
+    expr: kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes * 100 < 10
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Kubernetes Volume out of disk space (instance {{ $labels.instance }})
+      description: "Volume is almost full (< 10% left), VALUE = {{ $value }}"
+
+  - alert: KubernetesVolumeFullInFourDays
+    expr: predict_linear(kubelet_volume_stats_available_bytes{instance!~"local-dev.*"}[6h], 4 * 24 * 3600) < 0 and kubelet_volume_stats_available_bytes
+    for: 10m
+    labels:
+      severity: Warning
+    annotations:
+      summary: K8S Volume将在4天内溢出 ({{ $labels.persistentvolumeclaim }})
+      description: "根据过往6小时的变化率{{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }},4天后Volume降剩余{{ $value | humanize }}可用."
+
+  - alert: KubernetesPersistentvolumeError
+    expr: kube_persistentvolume_status_phase{phase=~"Failed|Pending"} > 0
+    for: 0m
+    labels:
+      severity: Critical
+    annotations:
+      summary: Kubernetes PersistentVolume error (instance {{ $labels.instance }})
+      description: "Persistent volume is in bad state, VALUE = {{ $value }}"
+
+  - alert: KubernetesStatefulsetDown
+    expr: (kube_statefulset_status_replicas_ready{namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging",instance!~"local-dev.*"} / on (namespace, statefulset) kube_statefulset_status_replicas_current) != 1
+    for: 1m
+    labels:
+      severity: Critical
+    annotations:
+      summary: Kubernetes StatefulSet down (instance {{ $labels.instance }})
+      description: "A StatefulSet went down, VALUE = {{ $value }}"
+
+  - alert: KubernetesHpaScalingAbility
+    expr: kube_horizontalpodautoscaler_status_condition{status="false", condition="AbleToScale"} == 1
+    for: 3m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Kubernetes HPA scaling ability (instance {{ $labels.instance }})
+      description: "Pod is unable to scale, VALUE = {{ $value }}"
+
+  - alert: \KubernetesHpaMetricAvailability
+    expr: kube_horizontalpodautoscaler_status_condition{status="false", condition="ScalingActive"} == 1
+    for: 3m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Kubernetes HPA metric availability (instance {{ $labels.instance }})
+      description: "HPA is not able to collect metrics, VALUE = {{ $value }}"
+
+  - alert: KubernetesHpaScaleCapability
+    expr: kube_horizontalpodautoscaler_status_desired_replicas >= kube_horizontalpodautoscaler_spec_max_replicas
+    for: 3m
+    labels:
+      severity: Info
+    annotations:
+      summary: Kubernetes HPA scale capability (instance {{ $labels.instance }})
+      description: "The maximum number of desired Pods has been hit, VALUE = {{ $value }}"
+
+  - alert: 服务没有Ready
+    expr: sum by (namespace, pod) (kube_pod_status_phase{phase=~"Pending|Unknown|Failed",namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"}) > 0
+    for: 10m
+    labels:
+      severity: Error
+    annotations:
+      summary: 服务没有Ready
+      description: "服务在10分钟内没有进入Ready状态."
+
+  - alert: 服务在重启
+    expr: floor(sum(increase(kube_pod_container_status_restarts_total{namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"}[2m])) by (namespace, pod)) > 0
+    for: 0m
+    labels:
+      severity: Error
+    annotations:
+      summary: 服务在重启({{ $labels.pod }})
+      description: "服务在重启，近2分钟内重启{{ $value }}次"
+
+  - alert: 服务副本数不符合期望
+    expr: kube_replicaset_spec_replicas{namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"} != on (namespace, replicaset) kube_replicaset_status_ready_replicas{namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"}
+    for: 10m
+    labels:
+      severity: Error
+    annotations:
+      summary: 服务副本数不符合期望({{ $labels.replicaset }}/{{ $labels.namespace }})
+      description: "Ready状态的副本数不满足最小副本数，检查服务是否发生重启等异常情况"
+
+  - alert: 发布服务失败副本数不符合期望
+    expr: kube_deployment_spec_replicas{namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"} != on (namespace, deployment) kube_deployment_status_replicas_available{namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"}
+    for: 10m
+    labels:
+      severity: Error
+    annotations:
+      summary: 发布服务失败副本数不符合期望 ({{ $labels.deployment }}/{{ $labels.namespace }})
+      description: "Ready状态的副本数不符合期望的副本数发布失败"
+
+  - alert: 状态集副本数不符合期望
+    expr: kube_statefulset_status_replicas_ready{namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"} != on (namespace, statefulset) kube_statefulset_status_replicas{namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"}
+    for: 10m
+    labels:
+      severity: Warning
+    annotations:
+      summary: 状态集副本数不符合期望({{ $labels.statefulset }}/{{ $labels.namespace }})
+      description: "Ready状态的副本数不满足最小副本数，检查服务是否发生重启等异常情况"
+
+  - alert: KubernetesDeploymentGenerationMismatch
+    expr: kube_deployment_status_observed_generation{namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"} != on (namespace, deployment) kube_deployment_metadata_generation{namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"}
+    for: 10m
+    labels:
+      severity: Critical
+    annotations:
+      summary: Kubernetes Deployment generation mismatch ({{ $labels.deployment }})
+      description: "A Deployment has failed but has not been rolled back."
+
+  - alert: KubernetesStatefulsetGenerationMismatch
+    expr: kube_statefulset_status_observed_generation{namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"} != on (namespace, statefulset) kube_statefulset_metadata_generation{namespace!~"kube-.*|default|prometheus|cert-manager|logagent|logging"}
+    for: 10m
+    labels:
+      severity: Critical
+    annotations:
+      summary: Kubernetes StatefulSet generation mismatch ({{ $labels.statefulset }})
+      description: "A StatefulSet has failed but has not been rolled back."
+
+  - alert: KubernetesClientCertificateExpiresNextWeek
+    expr: apiserver_client_certificate_expiration_seconds_count{job="apiserver"} > 0 and histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="apiserver"}[5m]))) < 7*24*60*60
+    for: 0m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Kubernetes client certificate expires next week (instance {{ $labels.instance }})
+      description: "A client certificate used to authenticate to the apiserver is expiring next week., VALUE = {{ $value }}"
+
+  - alert: KubernetesClientCertificateExpiresSoon
+    expr: apiserver_client_certificate_expiration_seconds_count{job="apiserver"} > 0 and histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="apiserver"}[5m]))) < 24*60*60
+    for: 0m
+    labels:
+      severity: Critical
+    annotations:
+      summary: Kubernetes client certificate expires soon (instance {{ $labels.instance }})
+      description: "A client certificate used to authenticate to the apiserver is expiring in less than 24.0 hours., VALUE = {{ $value }}"
+
+  rules:
+  - alert: HostOutOfMemory
+    expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes * 100 < 10
+    for: 2m
+    labels:
+      severity: Critical
+    annotations:
+      summary: Host out of memory value：{{ $value }}({{ $labels.instance }})
+      description: "Node memory is filling up (< 10% left)"
+
+  - alert: HostMemoryUnderMemoryPressure
+    expr: rate(node_vmstat_pgmajfault[1m]) > 1000
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host memory under memory pressure value：{{ $value }}({{ $labels.instance }})
+      description: "The node is under heavy memory pressure. High rate of major page faults"
+
+  - alert: HostUnusualNetworkThroughputIn
+    expr: sum by (instance) (rate(node_network_receive_bytes_total[2m])) / 1024 / 1024 > 100
+    for: 5m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host unusual network throughput in value：{{ $value }}({{ $labels.instance }})
+      description: "Host network interfaces are probably receiving too much data (> 100 MB/s)"
+
+  - alert: HostUnusualNetworkThroughputOut
+    expr: sum by (instance) (rate(node_network_transmit_bytes_total[2m])) / 1024 / 1024 > 100
+    for: 5m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host unusual network throughput out value：{{ $value }}({{ $labels.instance }})
+      description: "Host network interfaces are probably sending too much data (> 100 MB/s)"
+
+  - alert: HostUnusualDiskReadRate
+    expr: sum by (instance) (rate(node_disk_read_bytes_total[2m])) / 1024 / 1024 > 100
+    for: 5m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host unusual disk read rate value：{{ $value }}({{ $labels.instance }})
+      description: "Disk is probably reading too much data (> 100 MB/s)"
+
+  - alert: HostUnusualDiskWriteRate
+    expr: sum by (instance) (rate(node_disk_written_bytes_total[2m])) / 1024 / 1024 > 100
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host unusual disk write rate value：{{ $value }}({{ $labels.instance }})
+      description: "Disk is probably writing too much data (> 100 MB/s)"
+
+  - alert: HostOutOfDiskSpace
+    expr: (node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes < 10 and ON (instance, device, mountpoint) node_filesystem_readonly == 0
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: 文件系统可用空间低于10% value：{{ $value }}({{ $labels.instance }})
+      description: "文件系统空间使用率高 (< 10% left)"
+
+  - alert: HostDiskWillFillIn24Hours
+    expr: (node_filesystem_avail_bytes * 100) / node_filesystem_size_bytes < 10 and ON (instance, device, mountpoint) predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs"}[1h], 24 * 3600) < 0 and ON (instance, device, mountpoint) node_filesystem_readonly == 0
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: 文件系统空间预计在24小时后使用完 value：{{ $value }}({{ $labels.instance }})
+      description: "文件系统空间快耗尽"
+
+  - alert: HostOutOfInodes
+    expr: node_filesystem_files_free{mountpoint ="/rootfs"} / node_filesystem_files{mountpoint="/rootfs"} * 100 < 10 and ON (instance, device, mountpoint) node_filesystem_readonly{mountpoint="/rootfs"} == 0
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: 文件系统可用 inode 低于10% value：{{ $value }}({{ $labels.instance }})
+      description: "文件系统inode使用率高 (< 10% left)"
+
+  - alert: HostInodesWillFillIn24Hours
+    expr: node_filesystem_files_free{mountpoint ="/rootfs"} / node_filesystem_files{mountpoint="/rootfs"} * 100 < 10 and predict_linear(node_filesystem_files_free{mountpoint="/rootfs"}[1h], 24 * 3600) < 0 and ON (instance, device, mountpoint) node_filesystem_readonly{mountpoint="/rootfs"} == 0
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: 文件系统inode快耗尽 value：{{ $value }}({{ $labels.instance }})
+      description: "文件系统 inode 预计在24小时后使用完"
+
+  - alert: HostUnusualDiskReadLatency
+    expr: rate(node_disk_read_time_seconds_total[1m]) / rate(node_disk_reads_completed_total[1m]) > 0.1 and rate(node_disk_reads_completed_total[1m]) > 0
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host unusual disk read latency value：{{ $value }}({{ $labels.instance }})
+      description: "Disk latency is growing (read operations > 100ms)"
+
+  - alert: HostUnusualDiskWriteLatency
+    expr: rate(node_disk_write_time_seconds_total[1m]) / rate(node_disk_writes_completed_total[1m]) > 0.9 and rate(node_disk_writes_completed_total[1m]) > 0
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host unusual disk write latency value：{{ $value }}({{ $labels.instance }})
+      description: "Disk latency is growing (write operations > 900ms)"
+
+  - alert: HostHighCpuLoad
+    expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100) > 80
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host high CPU load value：{{ $value }}({{ $labels.instance }})
+      description: "CPU load is > 80%"
+
+  - alert: 5分钟平均负载过高
+    expr: floor(max(node_load5)by(clusterName,project,instance,kubernetes_node)*100/count(node_cpu_seconds_total{mode="system"}) by(clusterName,project,instance,kubernetes_node))>150
+    for: 5m
+    labels:
+      severity: Warning
+    annotations:
+      summary: 5分钟平均负载过高：{{ $value }}%({{ $labels.instance }})
+      description: "5分钟平均负载过高(负载/核数) > 150%"
+
+  - alert: HostCpuStealNoisyNeighbor
+    expr: avg by(instance) (rate(node_cpu_seconds_total{mode="steal"}[5m])) * 100 > 10
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host CPU steal noisy neighbor value：{{ $value }}({{ $labels.instance }})
+      description: "CPU steal is > 10%. A noisy neighbor is killing VM performances or a spot instance may be out of credit."
+
+  - alert: HostSwapIsFillingUp
+    expr: (1 - (node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes)) * 100 > 80
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host swap is filling up value：{{ $value }}({{ $labels.instance }})
+      description: "Swap is filling up (>80%)"
+
+  - alert: HostSystemdServiceCrashed
+    expr: node_systemd_unit_state{state="failed"} == 1
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host systemd service crashed value：{{ $value }}({{ $labels.instance }})
+      description: "systemd service crashed"
+
+  - alert: HostPhysicalComponentTooHot
+    expr: node_hwmon_temp_celsius > 75
+    for: 5m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host physical component too hot value：{{ $value }}({{ $labels.instance }})
+      description: "Physical hardware component too hot"
+
+  - alert: HostNodeOvertemperatureAlarm
+    expr: node_hwmon_temp_crit_alarm_celsius == 1
+    for: 2m
+    labels:
+      severity: Critical
+    annotations:
+      summary: Host node overtemperature alarm value：{{ $value }}({{ $labels.instance }})
+      description: "Physical node temperature alarm triggered"
+
+  - alert: HostRaidArrayGotInactive
+    expr: node_md_state{state="inactive"} > 0
+    for: 1m
+    labels:
+      severity: Critical
+    annotations:
+      summary: Host RAID array got inactive value：{{ $value }}({{ $labels.instance }})
+      description: "RAID array {{ $labels.device }} is in degraded state due to one or more disks failures. Number of spare drives is insufficient to fix issue automatically."
+
+  - alert: HostRaidDiskFailure
+    expr: node_md_disks{state="failed"} > 0
+    for: 2m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host RAID disk failure value：{{ $value }}({{ $labels.instance }})
+      description: "At least one device in RAID array on {{ $labels.instance }} failed. Array {{ $labels.md_device }} needs attention and possibly a disk swap"
+
+  - alert: HostKernelVersionDeviations
+    expr: count(sum(label_replace(node_uname_info, "kernel", "$1", "release", "([0-9]+.[0-9]+.[0-9]+).*")) by (kernel)) > 1
+    for: 6h
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host kernel version deviations value：{{ $value }}({{ $labels.instance }})
+      description: "Different kernel versions are running"
+
+  - alert: HostOomKillDetected
+    expr: increase(node_vmstat_oom_kill[1m]) > 0
+    for: 0m
+    labels:
+      severity: Critical
+    annotations:
+      summary: Host OOM kill detected value：{{ $value }}({{ $labels.instance }})
+      description: "OOM kill detected"
+
+  - alert: HostEdacCorrectableErrorsDetected
+    expr: increase(node_edac_correctable_errors_total[1m]) > 0
+    for: 0m
+    labels:
+      severity: Info
+    annotations:
+      summary: Host EDAC Correctable Errors detected value：{{ $value }}({{ $labels.instance }})
+      description: "Host {{ $labels.instance }} has had {{ printf \"%.0f\" $value }} correctable memory errors reported by EDAC in the last 5 minutes."
+
+  - alert: HostEdacUncorrectableErrorsDetected
+    expr: node_edac_uncorrectable_errors_total > 0
+    for: 0m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host EDAC Uncorrectable Errors detected value：{{ $value }}({{ $labels.instance }})
+      description: "Host {{ $labels.instance }} has had {{ printf \"%.0f\" $value }} uncorrectable memory errors reported by EDAC in the last 5 minutes."
+
+  - alert: HostNetworkReceiveErrors
+    expr: rate(node_network_receive_errs_total[2m]) / rate(node_network_receive_packets_total[2m]) > 0.01
+    for: 10m
+    labels:
+      severity: Warning
+    annotations:
+      summary: 网卡接收数据出错 value：{{ $value }}({{ $labels.instance }})
+      description: "Host {{ $labels.instance }} interface {{ $labels.device }} has encountered {{ printf \"%.0f\" $value }} receive errors in the last five minutes."
+
+  - alert: HostNetworkTransmitErrors
+    expr: rate(node_network_transmit_errs_total[2m]) / rate(node_network_transmit_packets_total[2m]) > 0.01
+    for: 10m
+    labels:
+      severity: Warning
+    annotations:
+      summary: 网卡发送数据出错 value：{{ $value }}({{ $labels.instance }})
+      description: "Host {{ $labels.instance }} interface {{ $labels.device }} has encountered {{ printf \"%.0f\" $value }} transmit errors in the last five minutes."
+
+  - alert: HostNetworkInterfaceSaturated
+    expr: (rate(node_network_receive_bytes_total{device!~"^tap.*"}[1m]) + rate(node_network_transmit_bytes_total{device!~"^tap.*"}[1m])) / node_network_speed_bytes{device!~"^tap.*"} > 0.8
+    for: 1m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host Network Interface Saturated value：{{ $value }}({{ $labels.instance }})
+      description: "The network interface \"{{ $labels.interface }}\" on \"{{ $labels.instance }}\" is getting overloaded."
+
+  - alert: HostConntrackLimit
+    expr: node_nf_conntrack_entries / node_nf_conntrack_entries_limit > 0.8
+    for: 5m
+    labels:
+      severity: Warning
+    annotations:
+      summary: Host conntrack limit value：{{ $value }}({{ $labels.instance }})
+      description: "The number of conntrack is approching limit"
+
+  - alert: HostClockSkew
+    expr: (node_timex_offset_seconds > 0.05 and deriv(node_timex_offset_seconds[5m]) >= 0) or (node_timex_offset_seconds < -0.05 and deriv(node_timex_offset_seconds[5m]) <= 0)
+    for: 10m
+    labels:
+      severity: Warning
+    annotations:
+      summary: 机器时钟漂移 value：{{ $value }}({{ $labels.instance }})
+      description: "Clock skew detected. Clock is out of sync."
+
+  - alert: HostClockNotSynchronising
+    expr: min_over_time(node_timex_sync_status[1m]) == 0 and node_timex_maxerror_seconds >= 16
+    for: 10m
+    labels:
+      severity: Warning
+    annotations:
+      summary: 机器时钟未同步 value：{{ $value }}({{ $labels.instance }})
+      description: "Clock not synchronising."
+
+  rules:
+  - alert: MongodbDown
+    expr: mongodb_up == 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: MongoDB Down value：{{ $value }}({{ $labels.instance }})
+      description: "MongoDB instance is down"
+
+  - alert: MongodbReplicationLag
+    expr: mongodb_mongod_replset_member_optime_date{state="PRIMARY"} - ON (set) mongodb_mongod_replset_member_optime_date{state="SECONDARY"} > 10
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: MongoDB replication lag value：{{ $value }}({{ $labels.instance }})
+      description: "Mongodb replication lag is more than 10s"
+
+  - alert: MongodbReplicationHeadroom
+    expr: (avg(mongodb_mongod_replset_oplog_tail_timestamp - mongodb_mongod_replset_oplog_head_timestamp) - (avg(mongodb_mongod_replset_member_optime_date{state="PRIMARY"}) - avg(mongodb_mongod_replset_member_optime_date{state="SECONDARY"}))) <= 0
+    for: 0m
+    labels:
+      pmt_project: zhongtai
+      severity: critical
+    annotations:
+      summary: MongoDB replication headroom value：{{ $value }}({{ $labels.instance }})
+      description: "MongoDB replication headroom is <= 0"
+
+  - alert: MongodbNumberCursorsOpen
+    expr: mongodb_mongod_metrics_cursor_open{state="total"} > 10 * 1000
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: MongoDB number cursors open value：{{ $value }}({{ $labels.instance }})
+      description: "Too many cursors opened by MongoDB for clients (> 10k)"
+
+  - alert: MongodbCursorsTimeouts
+    expr: increase(mongodb_mongod_metrics_cursor_timed_out_total[1m]) > 100
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: MongoDB cursors timeouts value：{{ $value }}({{ $labels.instance }})
+      description: "Too many cursors are timing out"
+
+  - alert: MongodbTooManyConnections
+    expr: avg by(instance) (rate(mongodb_connections{state="current"}[1m])) / avg by(instance) (sum (mongodb_connections) by (instance)) * 100 > 80
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: MongoDB too many connections value：{{ $value }}({{ $labels.instance }})
+      description: "Too many connections (> 80%)"
+
+  - alert: MongodbVirtualMemoryUsage
+    expr: (sum(mongodb_memory{type="virtual"}) BY (instance) / sum(mongodb_memory{type="mapped"}) BY (instance)) > 3
+    for: 2m
+    labels:
+      pmt_project: zhongtai
+      severity: warning
+    annotations:
+      summary: MongoDB virtual memory usage value：{{ $value }}({{ $labels.instance }})
+      description: "High memory usage"
